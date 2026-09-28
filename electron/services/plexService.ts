@@ -1122,7 +1122,7 @@ export const PlexService = {
       }
     }
 
-    for (const label of ['MediUX', 'ThePosterDB']) {
+    for (const label of ['MediUX', 'ThePosterDB', 'Overlay']) {
       try {
         await plexFetch(
           baseUrl, token,
