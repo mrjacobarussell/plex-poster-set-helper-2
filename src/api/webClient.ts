@@ -1,7 +1,7 @@
 import type { Api } from '../../electron/preload'
 import type {
   AppConfig, ScrapeProgress, LogEntry, PlexAuthStatus, UpdateInfo, UpdateProgress,
-  AppEnv, ScheduledJob, SchedulerEngineStatus, BrowserStatus,
+  AppEnv, ScheduledJob, SchedulerEngineStatus, BrowserStatus, BrowserActionResult, BrowserInstallState,
   SectionItemsReq, BrowseSetsReq, UserSetsReq, CreatorSearchReq, CollectionsReq, CollectionSetsReq,
   CurrentArtReq, CurrentArtRes, UserSetsChunk,
 } from '../../electron/ipc/types'
@@ -192,9 +192,25 @@ export function createWebClient(): Api {
 
     browser: {
       getStatus: (): Promise<BrowserStatus> => apiFetch('/api/browser/status'),
-      install: () => apiFetch('/api/browser/install', { method: 'POST' }),
+      install: (options?: { force?: boolean }): Promise<BrowserActionResult> =>
+        apiFetch('/api/browser/install', { method: 'POST', body: JSON.stringify(options ?? {}) }),
+      cancelInstall: (): Promise<BrowserStatus> => apiFetch('/api/browser/cancel', { method: 'POST', body: '{}' }),
+      verify: (): Promise<BrowserActionResult> => apiFetch('/api/browser/verify', { method: 'POST', body: '{}' }),
+      useExecutable: (execPath: string | null): Promise<BrowserActionResult> =>
+        apiFetch('/api/browser/executable', { method: 'POST', body: JSON.stringify({ path: execPath }) }),
+      pickExecutable: async (): Promise<BrowserActionResult> => ({
+        ok: false,
+        error: {
+          kind: 'launch',
+          message: 'Browsing for an executable is only available in the desktop app',
+          hint: 'Pick one of the browsers detected on the server instead.',
+        },
+        status: await apiFetch('/api/browser/status'),
+      }),
       onInstallProgress: (cb: (line: string) => void) =>
         onSse('browser:installProgress', (_, data) => cb(data as string)),
+      onInstallState: (cb: (state: BrowserInstallState) => void) =>
+        onSse('browser:installState', (_, data) => cb(data as BrowserInstallState)),
     },
 
     log: {
